@@ -3,6 +3,8 @@ import ai_edge_litert.interpreter as litert
 import cv2
 import pathlib
 
+from time import time
+
 
 def classify_cv2(bgr_frame, model_path):
     # 1. Load Model
@@ -34,18 +36,28 @@ def classify_cv2(bgr_frame, model_path):
 
 
 # Example usage:
+if __name__ == "__main__":
+    files = pathlib.Path("./d6/all-rolls").glob("*.jpeg")
+    # randomise order
+    files = np.array(list(files))
+    np.random.shuffle(files)
 
-files = pathlib.Path("./d6/all-rolls").glob("*.jpeg")
-# randomise order
-files = np.array(list(files))
-np.random.shuffle(files)
-for file in files:
-    frame = cv2.imread(file)
-    assert frame is not None, "Failed to load image. Check the path and file."
+    # first run
+    label, conf = classify_cv2(files[0], "d6_classifier.tflite")
 
-    frame = cv2.resize(frame, (128, 128))
-    # cv2.imshow("Input Image", frame)
-    # cv2.waitKey(0)
-    label, conf = classify_cv2(frame, "d6_classifier.tflite")
+    starttime = time()
+    for file in files:
+        time_0 = time()
+        frame = cv2.imread(file)
+        assert frame is not None, "Failed to load image. Check the path and file."
 
-    print(f"file {file} Predicted: {label} with confidence {conf:.2f}")
+        frame = cv2.resize(frame, (128, 128))
+        # cv2.imshow("Input Image", frame)
+        # cv2.waitKey(0)
+        label, conf = classify_cv2(frame, "d6_classifier.tflite")
+        time_diff = time() - time_0
+        print(
+            f"file {file} Predicted: {label} with confidence {conf:.2f}, took {time_diff:.4f} seconds ")
+    total_time = time() - starttime
+    print(
+        f"Processed {len(files)} images in {total_time:.2f} seconds, average {total_time/len(files):.4f} seconds per image")
