@@ -43,7 +43,9 @@ if __name__ == "__main__":
     np.random.shuffle(files)
 
     # first run
-    label, conf = classify_cv2(files[0], "d6_classifier.tflite")
+    frame = cv2.imread(files[0])
+
+    label, conf = classify_cv2(frame, "d6_classifier.tflite")
 
     starttime = time()
     for file in files:
