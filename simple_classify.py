@@ -2,7 +2,6 @@ import numpy as np
 import ai_edge_litert.interpreter as litert
 import cv2
 import pathlib
-import matplotlib.pyplot as plt
 
 
 def classify_cv2(bgr_frame, model_path):
