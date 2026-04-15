@@ -59,7 +59,7 @@ if __name__ == "__main__":
         label, conf = classify_cv2(frame, "d6_classifier.tflite")
         time_diff = time() - time_0
         print(
-            f"file {file} Predicted: {label} with confidence {conf:.2f}, took {time_diff:.4f} seconds ")
+            f"file {file} Predicted: {label:<5} with confidence {conf:.2f}, took {time_diff:.4f} seconds ")
     total_time = time() - starttime
     print(
         f"Processed {len(files)} images in {total_time:.2f} seconds, average {total_time/len(files):.4f} seconds per image")
