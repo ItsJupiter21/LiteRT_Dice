@@ -4,7 +4,7 @@ Dice recognition Neural network? i guess!
 
 ## Goals
 
-Make a classification model capable of reliably recognising dice values, 
+Make a classification model capable of reliably recognising dice values,
 
 Must support:
 
