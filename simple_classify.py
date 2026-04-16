@@ -24,7 +24,7 @@ from classify import DiceClassifier
 if __name__ == "__main__":
     classifer = DiceClassifier(dice_types['d6'])
 
-    base_dir = pathlib.Path("tests/d6/known")
+    base_dir = pathlib.Path("d6/")
     subdirs = dice_types["d6"]["classes"]
     count = 0
     starttime = time()
@@ -48,8 +48,8 @@ if __name__ == "__main__":
                     time_diff = time() - proctime
                     if sub == label:
                         succ += 1
-                        print(
-                            f"---> ✅Predicted: {label:<5} with confidence {conf:.2f} for {file} , took {time_diff:.4f} seconds ")
+                        # print(
+                        #    f"---> ✅Predicted: {label:<5} with confidence {conf:.2f} for {file} , took {time_diff:.4f} seconds ")
                     else:
                         fail += 1
                         print(

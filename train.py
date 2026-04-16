@@ -2,6 +2,7 @@ import tensorflow as tf
 from models import dice_types
 from time import time
 import matplotlib.pyplot as plt
+import math
 
 # ==========================================
 # 1. Configuration & File Paths
@@ -135,21 +136,33 @@ model.summary()
 # ==========================================
 # 5. Visualisation (Sanity Check)
 # ==========================================
-print("\nGenerating augmented batch preview...")
+print(f"\nGenerating augmented preview for full batch (Size: {BATCH_SIZE})...")
+
 for images, labels in train_ds.take(1):
     augmented_images = data_augmentation(images, training=True)
-    plt.figure(figsize=(10, 10))
-    for i in range(9):
-        ax = plt.subplot(3, 3, i + 1)
-        display_img = augmented_images[i].numpy().astype("uint8")
-        plt.imshow(display_img)
-        plt.title(class_names[labels[i]])
-        plt.axis("off")
-    plt.savefig(PREVIEW_FIG_PATH)
-    print(
-        f"sample batch generated at '{PREVIEW_FIG_PATH}'.")
-    break
 
+    # 1. Dynamically calculate grid dimensions
+    # We'll fix the number of columns to 8 and calculate needed rows
+    cols = 8
+    rows = math.ceil(len(images) / cols)
+
+    # 2. Scale figsize based on grid size (approx 2 inches per image)
+    plt.figure(figsize=(cols * 2, rows * 2))
+
+    for i in range(len(images)):
+        ax = plt.subplot(rows, cols, i + 1)
+
+        # Convert to uint8 for plotting (Keras outputs floats [0-255] or [0-1])
+        display_img = augmented_images[i].numpy().astype("uint8")
+
+        plt.imshow(display_img)
+        plt.title(class_names[labels[i]], fontsize=10)
+        plt.axis("off")
+
+    plt.tight_layout()
+    plt.savefig(PREVIEW_FIG_PATH)
+    print(f"Full batch preview saved to '{PREVIEW_FIG_PATH}'.")
+    break
 # ==========================================
 # 6. Training the Model
 # ==========================================
