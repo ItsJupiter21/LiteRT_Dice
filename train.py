@@ -4,6 +4,7 @@ from models import dice_types
 
 from time import time
 import matplotlib.pyplot as plt
+
 # ==========================================
 # 1. Configuration & Hyperparameters
 # ==========================================
@@ -15,14 +16,14 @@ if DICE_TYPE not in dice_types:
 DATASET_DIR = dice_types[DICE_TYPE]["dataset_dir"]
 MODEL_PATH = dice_types[DICE_TYPE]["model_path"]
 
-tflite_filename = f"{DICE_TYPE}_classifier.tflite"
+tflite_filename = f"{DICE_TYPE}_classifierv2.tflite"
 
-FIG_PATH = f"training_metrics_{DICE_TYPE}_classifier.png"
+FIG_PATH = f"training_metrics_{DICE_TYPE}_classifierv2.png"
 
 BATCH_SIZE = 32
 IMG_HEIGHT = 128
 IMG_WIDTH = 128
-EPOCHS = 200
+EPOCHS = 50
 
 print("Loading dataset...")
 starttime = time()
@@ -66,24 +67,38 @@ AUTOTUNE = tf.data.AUTOTUNE
 train_ds = train_ds.cache().shuffle(1000).prefetch(buffer_size=AUTOTUNE)
 val_ds = val_ds.cache().prefetch(buffer_size=AUTOTUNE)
 
-# ==========================================
-# 4. Model Architecture Construction
-# ==========================================
-# Data augmentation helps prevent overfitting on small datasets
-data_augmentation = tf.keras.Sequential([
-    # tf.keras.layers.RandomFlip("horizontal_and_vertical"),
-    tf.keras.layers.RandomRotation(1),
+# ---------------------------------------------------------
+# STEP A: The CPU Data Pipeline (Color Shifting)
+# ---------------------------------------------------------
 
-    # Keep these to help with lighting and distance
+
+def augment_colors(image, label):
+    image = tf.image.random_hue(image, max_delta=0.5)
+    image = tf.image.random_saturation(image, lower=0.5, upper=1.5)
+    return image, label
+
+
+# Map it to training data only
+train_ds = train_ds.map(augment_colors, num_parallel_calls=tf.data.AUTOTUNE)
+
+# ---------------------------------------------------------
+# STEP B: The GPU Model Pipeline (Geometry & Lighting)
+# ---------------------------------------------------------
+data_augmentation = tf.keras.Sequential([
+    # Geometric (Keep these!)
+    tf.keras.layers.RandomRotation(1.0),
     tf.keras.layers.RandomZoom(0.1),
-    tf.keras.layers.RandomContrast(0.1),
+
+    # Lighting
+    tf.keras.layers.RandomContrast(0.2),
+    tf.keras.layers.RandomBrightness(0.2),
 ])
 
-# A lightweight CNN suitable for edge devices
+# Build the model
 model = tf.keras.Sequential([
     tf.keras.Input(shape=(IMG_HEIGHT, IMG_WIDTH, 3)),
-    data_augmentation,
-    tf.keras.layers.Rescaling(1./255),  # Normalize pixel values to [0, 1]
+    data_augmentation,          # <--- Geometric/Lighting happens here
+    tf.keras.layers.Rescaling(1./255),
 
     tf.keras.layers.Conv2D(16, 3, padding='same', activation='relu'),
     tf.keras.layers.MaxPooling2D(),
@@ -107,6 +122,37 @@ model.compile(
 )
 
 model.summary()
+
+# ==========================================
+# visualisation
+# ==========================================
+for images, labels in train_ds.take(1):
+
+    # 2. Pass the batch through your Keras augmentation block.
+    # We must set training=True so the random layers know to activate.
+    augmented_images = data_augmentation(images, training=True)
+
+    # 3. Create a 3x3 grid to show 9 of the images
+    plt.figure(figsize=(10, 10))
+    for i in range(9):
+        ax = plt.subplot(3, 3, i + 1)
+
+        # Convert the tensor to a NumPy array and cast to uint8 (0-255)
+        # Matplotlib requires this format to display RGB images correctly
+        display_img = augmented_images[i].numpy().astype("uint8")
+
+        plt.imshow(display_img)
+
+        # Look up the actual string name (e.g., 'four') using the integer label
+        plt.title(class_names[labels[i]])
+        plt.axis("off")
+
+    # Save it to your folder so you can inspect it
+    plt.savefig("augmented_batch_preview.png")
+    print("Success! Open 'augmented_batch_preview.png' to see your data.")
+
+    # Break after the first batch so training can continue
+    break
 
 # ==========================================
 # 5. Training the Model
