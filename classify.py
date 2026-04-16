@@ -1,108 +1,70 @@
-import tensorflow as tf
 import numpy as np
-import pathlib
+import ai_edge_litert.interpreter as litert
 import cv2
-import os
 
-# ==========================================
-# 1. Configuration
-# ==========================================
-DICE_TYPE = "d6"
-MODEL_PATH = f"{DICE_TYPE}_classifier.tflite"
+try:
+    from typing import TYPE_CHECKING
+except ImportError:
+    TYPE_CHECKING = False
+if TYPE_CHECKING:
+    from cv2.typing import MatLike
+    from typing import Literal
+    import numpy.typing as npt
+else:
+    MatLike = any
 
-TEST_DIR = pathlib.Path("d6/all-rolls")
-IMG_HEIGHT = 128
-IMG_WIDTH = 128
-
-# Note: These MUST be in alphabetical order to match training labels
-CLASS_NAMES = ['five', 'four', 'one', 'six', 'three', 'two']
-
-# ==========================================
-# 2. Load the LiteRT (TFLite) Model
-# ==========================================
-if not os.path.exists(MODEL_PATH):
-    print(f"Error: {MODEL_PATH} not found. Run your training script first!")
-    exit()
-
-interpreter = tf.lite.Interpreter(model_path=MODEL_PATH)
-interpreter.allocate_tensors()
-
-input_details = interpreter.get_input_details()
-output_details = interpreter.get_output_details()
+from typing import Any
 
 
-def run_classifier():
-    # Gather all images in the directory
-    extensions = ("*.jpg", "*.jpeg", "*.png", "*.bmp")
-    image_files = []
-    for ext in extensions:
-        image_files.extend(list(TEST_DIR.glob(ext)))
+def classify_dice(bgr_frame: MatLike, model: dict[str, Any]) -> tuple[str, int, float]:
+    '''
+    uses the provided model to classify the input image of a die and returns the predicted class name, dice value, and confidence score.
 
-    if not image_files:
-        print(f"No images found in: {TEST_DIR.absolute()}")
-        return
+    Parameters:
 
-    print(f"--- Starting Dice Review ---")
-    print(f"Found {len(image_files)} images.")
-    print("CONTROLS: Press any key for next image, 'q' to quit.")
-    print("-" * 30)
+        image: Input image as a NumPy array (BGR format as read by OpenCV), expected to be of shape (128, 128, 3).
+        model: A dictionary containing the model information, including:
+            - "classes": List of class names.
+            - "values": List of corresponding dice values.
+            - "model_path": Path to the TFLite model file.
 
-    for img_path in image_files:
-        # --- Preprocessing for Model ---
-        try:
-            # We use Keras load_img to ensure it matches training preprocessing
-            img_keras = tf.keras.utils.load_img(
-                img_path, target_size=(IMG_HEIGHT, IMG_WIDTH))
-            img_array = tf.keras.utils.img_to_array(img_keras)
-            input_tensor = np.expand_dims(img_array, axis=0)
-        except Exception as e:
-            print(f"Could not process {img_path.name}: {e}")
-            continue
+    Returns:
+        class_name: The predicted class name as a string.
+        dice_value: The corresponding dice value as an integer.
+        confidence: The confidence score of the prediction (float between 0 and 1).
+    '''
 
-        # --- Inference ---
-        interpreter.set_tensor(input_details[0]['index'], input_tensor)
-        interpreter.invoke()
-        predictions = interpreter.get_tensor(output_details[0]['index'])[0]
+    # 1. Load Model
+    interpreter = litert.Interpreter(model['model_path'])
+    interpreter.allocate_tensors()
 
-        # Calculate results
-        predicted_index = np.argmax(predictions)
-        label = CLASS_NAMES[predicted_index]
-        conf = predictions[predicted_index] * 100
+    # Convert BGR to RGB
+    if bgr_frame.shape != (128, 128, 3):
 
-        # --- Console Logging for Uncertainty ---
-        # Almost all models are < 100% due to math, but we log it as requested
-        if conf < 99:
-            print(f"LOG: {img_path.name} | Pred: {label} | Conf: {conf:.2f}%")
+        print(
+            f"Warning: Unexpected image shape {bgr_frame.shape}, expected (128, 128, 3). Attempting to resize.")
+        bgr_frame = cv2.resize(bgr_frame, (128, 128))
 
-        # --- OpenCV Visualization ---
-        display_img = cv2.imread(str(img_path))
-        if display_img is None:
-            continue
+    img = cv2.cvtColor(bgr_frame, cv2.COLOR_BGR2RGB)
 
-        # Resize for better visibility on screen
-        display_img = cv2.resize(
-            display_img, (512, 512), interpolation=cv2.INTER_NEAREST)
+    # Normalize and add Batch dimension
+    input_data = np.expand_dims(img.astype(np.float32), axis=0)
 
-        # Update window and title
-        window_name = "Dice Review"
-        cv2.imshow(window_name, display_img)
-        cv2.setWindowTitle(
-            window_name, f"File: {img_path.name} | Prediction: {label} ({conf:.1f}%)")
+    # 3. Run Inference
+    input_idx = interpreter.get_input_details()[0]['index']
+    interpreter.set_tensor(input_idx, input_data)
 
-        # Bring window to front
-        cv2.setWindowProperty(window_name, cv2.WND_PROP_TOPMOST, 1)
+    interpreter.invoke()
 
-        # Wait for keypress - waitKey(0) pauses execution
-        key = cv2.waitKey(0) & 0xFF
+    # 4. Results
+    output_idx = interpreter.get_output_details()[0]['index']
+    probs = interpreter.get_tensor(output_idx)[0]
 
-        # If 'q' or ESC (27) is pressed, exit
-        if key == ord('q') or key == 27:
-            print("Quitting...")
-            break
+    p_idx = np.argmax(probs)
 
-    cv2.destroyAllWindows()
-    print("Review finished.")
+    class_name = model['classes'][p_idx]
+    dice_value = model['values'][p_idx]
 
+    confidence = probs[p_idx]
 
-if __name__ == "__main__":
-    run_classifier()
+    return class_name, dice_value, confidence
