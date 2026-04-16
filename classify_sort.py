@@ -3,8 +3,8 @@ from classify import classify_dice
 from models import dice_types
 import cv2
 
-input_dir = pathlib.Path("tests/d6/unknown")
-output_dir = pathlib.Path("tests/d6/unknown/sorted")
+input_dir = pathlib.Path("tests/d6/known2")
+output_dir = pathlib.Path("tests/d6/known2/sorted")
 # Add 'unknown' for low confidence cases
 subdirs = dice_types["d6"]["classes"] + ["unknown"]
 
@@ -19,9 +19,11 @@ for file in input_dir.iterdir():
         assert img is not None, f"Failed to load image: {file}"
         label, _, conf = classify_dice(img, dice_types["d6"])
 
-        print(f"Predicted: {label} with confidence {conf:.2f} for {file}")
-        if conf < 0.5:
-            print(f"Low confidence ({conf:.2f}) for {file}, skipping move.")
+        if conf < 0.6:
+
+           # print(f"Low confidence ({conf:.2f}) for {file}, skipping move.")
+            print(
+                f"LOW CONF: Predicted: {label} with confidence {conf:.2f} for {file}")
             target_path = output_dir / "unknown" / file.name
         else:
             # Move the file to the corresponding subdirectory in the output directory
