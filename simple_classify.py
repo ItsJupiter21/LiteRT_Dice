@@ -36,7 +36,6 @@ if __name__ == "__main__":
 
         # Check if the path actually exists and is a directory to avoid errors
         if current_path.is_dir():
-            print(f"\nProcessing: {current_path}")
             print(sub)
             # Iterate over files within this specific subdirectory
             for file in current_path.iterdir():

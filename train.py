@@ -25,7 +25,7 @@ METRICS_FIG_PATH = f"training_metrics_{DICE_TYPE}_classifier.png"
 BATCH_SIZE = 32
 IMG_HEIGHT = 128
 IMG_WIDTH = 128
-EPOCHS = 200
+EPOCHS = 400
 
 print("Loading dataset...")
 starttime = time()

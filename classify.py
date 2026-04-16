@@ -15,11 +15,6 @@ else:
 
 from typing import Any
 
-import numpy as np
-import ai_edge_litert.interpreter as litert
-import cv2
-from typing import Any
-
 
 class DiceClassifier:
     def __init__(self, model_info: dict[str, Any]):
