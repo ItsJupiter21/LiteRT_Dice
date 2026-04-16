@@ -17,11 +17,12 @@ else:
     MatLike = any
 
 from typing import Any
-from classify import classify_dice
+from classify import DiceClassifier
 
 
 # Example usage:
 if __name__ == "__main__":
+    classifer = DiceClassifier(dice_types['d6'])
 
     base_dir = pathlib.Path("tests/d6/known")
     subdirs = dice_types["d6"]["classes"]
@@ -44,7 +45,7 @@ if __name__ == "__main__":
                     proctime = time()
                     img = cv2.imread(str(file))
                     assert img is not None, f"Failed to load image: {file}"
-                    label, _, conf = classify_dice(img, dice_types["d6"])
+                    label, _, conf = classifer.classify(img)
                     time_diff = time() - proctime
                     if sub == label:
                         succ += 1
@@ -61,4 +62,4 @@ if __name__ == "__main__":
     total_time = time() - starttime
     print(f"failed {fail} times, sucseeded {succ} times")
     print(
-        f"Processed {count} images in {total_time:.2f} seconds, average {total_time/count:.4f} seconds per image")
+        f"Processed {count} images in {total_time:.2f} seconds, average {count/total_time:.4f} seconds per image")

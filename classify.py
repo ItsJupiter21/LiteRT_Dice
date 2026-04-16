@@ -15,56 +15,52 @@ else:
 
 from typing import Any
 
+import numpy as np
+import ai_edge_litert.interpreter as litert
+import cv2
+from typing import Any
 
-def classify_dice(bgr_frame: MatLike, model: dict[str, Any]) -> tuple[str, int, float]:
-    '''
-    uses the provided model to classify the input image of a die and returns the predicted class name, dice value, and confidence score.
 
-    Parameters:
+class DiceClassifier:
+    def __init__(self, model_info: dict[str, Any]):
+        """
+        Loads the model into RAM once during initialization.
+        """
+        self.classes = model_info['classes']
+        self.values = model_info['values']
 
-        image: Input image as a NumPy array (BGR format as read by OpenCV), expected to be of shape (128, 128, 3).
-        model: A dictionary containing the model information, including:
-            - "classes": List of class names.
-            - "values": List of corresponding dice values.
-            - "model_path": Path to the TFLite model file.
+        # 1. Load model and allocate RAM ONCE
+        self.interpreter = litert.Interpreter(
+            model_path=model_info['model_path'])
+        self.interpreter.allocate_tensors()
 
-    Returns:
-        class_name: The predicted class name as a string.
-        dice_value: The corresponding dice value as an integer.
-        confidence: The confidence score of the prediction (float between 0 and 1).
-    '''
+        # 2. Cache the index pointers ONCE
+        self.input_idx = self.interpreter.get_input_details()[0]['index']
+        self.output_idx = self.interpreter.get_output_details()[0]['index']
 
-    # 1. Load Model
-    interpreter = litert.Interpreter(model['model_path'])
-    interpreter.allocate_tensors()
+    def classify(self, bgr_frame: np.ndarray) -> tuple[str, int, float]:
+        """
+        Runs extremely fast because the model is already waiting in RAM.
+        """
+        # Convert and resize
+        if bgr_frame.shape != (128, 128, 3):
+            bgr_frame = cv2.resize(bgr_frame, (128, 128))
 
-    # Convert BGR to RGB
-    if bgr_frame.shape != (128, 128, 3):
+        img = cv2.cvtColor(bgr_frame, cv2.COLOR_BGR2RGB)
+        input_data = np.expand_dims(img.astype(np.float32), axis=0)
 
-        print(
-            f"Warning: Unexpected image shape {bgr_frame.shape}, expected (128, 128, 3). Attempting to resize.")
-        bgr_frame = cv2.resize(bgr_frame, (128, 128))
+        # Run inference using cached indexes
+        self.interpreter.set_tensor(self.input_idx, input_data)
+        self.interpreter.invoke()
+        probs = self.interpreter.get_tensor(self.output_idx)[0]
 
-    img = cv2.cvtColor(bgr_frame, cv2.COLOR_BGR2RGB)
+        # Results
+        p_idx = np.argmax(probs)
+        return self.classes[p_idx], self.values[p_idx], probs[p_idx]
 
-    # Normalize and add Batch dimension
-    input_data = np.expand_dims(img.astype(np.float32), axis=0)
+# --- Usage ---
+# Initialize ONCE at the start of your script
+# my_classifier = OptimizedLiteRTClassifier(dice_types["d6"])
 
-    # 3. Run Inference
-    input_idx = interpreter.get_input_details()[0]['index']
-    interpreter.set_tensor(input_idx, input_data)
-
-    interpreter.invoke()
-
-    # 4. Results
-    output_idx = interpreter.get_output_details()[0]['index']
-    probs = interpreter.get_tensor(output_idx)[0]
-
-    p_idx = np.argmax(probs)
-
-    class_name = model['classes'][p_idx]
-    dice_value = model['values'][p_idx]
-
-    confidence = probs[p_idx]
-
-    return class_name, dice_value, confidence
+# Call inside your loop (e.g., while True: reading from webcam)
+# label, value, conf = my_classifier.classify(img)

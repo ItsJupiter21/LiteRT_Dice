@@ -17,9 +17,9 @@ DATASET_DIR = dice_types[DICE_TYPE]["dataset_dir"]
 MODEL_PATH = dice_types[DICE_TYPE]["model_path"]
 
 # Output File Paths
-TFLITE_FILENAME = f"{DICE_TYPE}_classifierV4.tflite"
-PREVIEW_FIG_PATH = f"augmented_batch_preview_{DICE_TYPE}V4.png"
-METRICS_FIG_PATH = f"training_metrics_{DICE_TYPE}_classifierV4.png"
+TFLITE_FILENAME = f"{DICE_TYPE}_classifier.tflite"
+PREVIEW_FIG_PATH = f"augmented_batch_preview_{DICE_TYPE}.png"
+METRICS_FIG_PATH = f"training_metrics_{DICE_TYPE}_classifier.png"
 
 # Hyperparameters
 BATCH_SIZE = 32
@@ -147,7 +147,7 @@ for images, labels in train_ds.take(1):
         plt.axis("off")
     plt.savefig(PREVIEW_FIG_PATH)
     print(
-        f"Success! Open '{PREVIEW_FIG_PATH}' to see your augmented training data.")
+        f"sample batch generated at '{PREVIEW_FIG_PATH}'.")
     break
 
 # ==========================================
