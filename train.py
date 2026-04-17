@@ -18,7 +18,9 @@ DATASET_DIR = DICE_TYPES[DICE_TYPE]["dataset_dir"]
 MODEL_PATH = DICE_TYPES[DICE_TYPE]["model_path"]
 
 # Output File Paths
+KERAS_FILENAME = f"{DICE_TYPE}_classifier.keras"
 TFLITE_FILENAME = f"{DICE_TYPE}_classifier.tflite"
+
 PREVIEW_FIG_PATH = f"augmented_batch_preview_{DICE_TYPE}.png"
 METRICS_FIG_PATH = f"training_metrics_{DICE_TYPE}_classifier.png"
 
@@ -184,18 +186,29 @@ history = model.fit(
 )
 
 # ==========================================
-# 7. Conversion to LiteRT (TFLite)
+# 7. Saving Both Model Formats
 # ==========================================
-print("\nConverting model to LiteRT format...")
+print("\n--- Exporting Models ---")
 
+# A. Save the Full Keras Model (.keras)
+# Use this for high-precision desktop testing and retraining
+print(f"1. Saving full Keras model: {KERAS_FILENAME}")
+model.save(KERAS_FILENAME)
+
+# B. Convert and Save LiteRT Model (.tflite)
+# Use this for deployment on the Raspberry Pi
+print(f"2. Converting to LiteRT: {TFLITE_FILENAME}")
 converter = tf.lite.TFLiteConverter.from_keras_model(model)
+# Applies dynamic range quantization
 converter.optimizations = [tf.lite.Optimize.DEFAULT]
 tflite_model = converter.convert()
 
 with open(TFLITE_FILENAME, 'wb') as f:
     f.write(tflite_model)
 
-print(f"\nSuccess! LiteRT model saved as '{TFLITE_FILENAME}'.")
+print(
+    f"\nSuccess! Both models are now saved., {KERAS_FILENAME} and {TFLITE_FILENAME}")
+
 endtime = time()
 time_diff = endtime - starttime
 
