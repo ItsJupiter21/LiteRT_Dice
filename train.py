@@ -173,10 +173,11 @@ print("\nStarting training...")
 # Early Stopping prevents overfitting
 early_stop = tf.keras.callbacks.EarlyStopping(
     monitor='val_loss',
-    patience=15,
-    restore_best_weights=True
+    patience=6,              # Drop this from 15 to 5 or 6
+    min_delta=0.005,         # Ignore microscopic improvements
+    restore_best_weights=True,
+    verbose=1                # Prints exactly when and why it stopped
 )
-
 history = model.fit(
     train_ds,
     validation_data=val_ds,
