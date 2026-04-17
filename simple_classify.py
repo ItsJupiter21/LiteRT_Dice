@@ -28,6 +28,8 @@ dice_type = 'd6_pips'
 classifer = DiceClassifier(DICE_TYPES[dice_type])
 
 base_dir = pathlib.Path(f"{dice_type}/")
+base_dir = pathlib.Path(f"tests/d6/known")
+''
 subdirs = DICE_TYPES[dice_type]["classes"]
 count = 0
 starttime = time()
@@ -51,8 +53,8 @@ for sub in subdirs:
                 time_diff = time() - proctime
                 if sub == label:
                     succ += 1
-                    # print(
-                    #   f"---> ✅Predicted: {label:<5} with confidence {conf:.2f} for {file} , took {time_diff:.4f} seconds ")
+                    print(
+                        f"---> ✅Predicted: {label:<5} with confidence {conf:.2f} for {file} , took {time_diff:.4f} seconds ")
                     if conf < 0.8:
                         print(
                             f"---> 🟡Predicted: {label:<5} with LOW confidence {conf:.2f} for {file} , took {time_diff:.4f} seconds ")

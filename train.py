@@ -21,14 +21,14 @@ MODEL_PATH = DICE_TYPES[DICE_TYPE]["model_path"]
 KERAS_FILENAME = f"{DICE_TYPE}_classifier.keras"
 TFLITE_FILENAME = f"{DICE_TYPE}_classifier.tflite"
 
-PREVIEW_FIG_PATH = f"augmented_batch_preview_{DICE_TYPE}.png"
-METRICS_FIG_PATH = f"training_metrics_{DICE_TYPE}_classifier.png"
+PREVIEW_FIG_PATH = f"images/augmented_batch_preview_{DICE_TYPE}.png"
+METRICS_FIG_PATH = f"images/training_metrics_{DICE_TYPE}_classifier.png"
 
 # Hyperparameters
 BATCH_SIZE = 32
 IMG_HEIGHT = 128
 IMG_WIDTH = 128
-EPOCHS = 400
+EPOCHS = 40
 
 print("Loading dataset...")
 starttime = time()
