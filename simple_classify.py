@@ -17,8 +17,12 @@ else:
     MatLike = any
 
 from typing import Any
-# from classifier import DiceClassifier
-from classifier_Tensorflow import DiceClassifier
+
+try:
+    from classifier import DiceClassifier
+except ImportError:
+    from classifier_Tensorflow import DiceClassifier
+    print("using simple classifier.")
 
 dice_type = 'd6_pips'
 classifer = DiceClassifier(DICE_TYPES[dice_type])
