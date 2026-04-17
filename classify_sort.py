@@ -1,20 +1,20 @@
 import pathlib
 from classify import DiceClassifier
-from models import dice_types
+from models import DICE_TYPES
 import cv2
 from time import time
 
 input_dir = pathlib.Path("tests/d6/unknown/")
 output_dir = pathlib.Path("tests/d6/unknown/sorted/")
 # Add 'unknown' for low confidence cases
-subdirs = dice_types["d6"]["classes"] + ["unknown"]
+subdirs = DICE_TYPES["d6"]["classes"] + ["unknown"]
 
 for sub in subdirs:
     # create the dirs if they don't exist
     output_subdir = output_dir / sub
     output_subdir.mkdir(parents=True, exist_ok=True)
 
-classifer = DiceClassifier(dice_types['d6'])
+classifer = DiceClassifier(DICE_TYPES['d6'])
 
 
 n = 0

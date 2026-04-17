@@ -1,5 +1,5 @@
 import tensorflow as tf
-from models import dice_types
+from models import DICE_TYPES
 from time import time
 import matplotlib.pyplot as plt
 import math
@@ -7,15 +7,15 @@ import math
 # ==========================================
 # 1. Configuration & File Paths
 # ==========================================
-DICE_TYPE = "d6"
-if DICE_TYPE not in dice_types:
+DICE_TYPE = "d6_pips"
+if DICE_TYPE not in DICE_TYPES:
     print(
-        f"Error: Unsupported DICE_TYPE '{DICE_TYPE}'. Available types: {list(dice_types.keys())}")
+        f"Error: Unsupported DICE_TYPE '{DICE_TYPE}'. Available types: {list(DICE_TYPES.keys())}")
     exit()
 
 # Data Paths
-DATASET_DIR = dice_types[DICE_TYPE]["dataset_dir"]
-MODEL_PATH = dice_types[DICE_TYPE]["model_path"]
+DATASET_DIR = DICE_TYPES[DICE_TYPE]["dataset_dir"]
+MODEL_PATH = DICE_TYPES[DICE_TYPE]["model_path"]
 
 # Output File Paths
 TFLITE_FILENAME = f"{DICE_TYPE}_classifier.tflite"
@@ -34,7 +34,7 @@ starttime = time()
 # ==========================================
 # 2. Data Loading & Splitting
 # ==========================================
-VALID_CLASSES = dice_types[DICE_TYPE]["classes"]
+VALID_CLASSES = DICE_TYPES[DICE_TYPE]["classes"]
 print(f"Targeting specific classes: {VALID_CLASSES}")
 
 train_ds = tf.keras.utils.image_dataset_from_directory(

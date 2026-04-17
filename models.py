@@ -1,7 +1,7 @@
 import pathlib
 
 
-dice_types = {
+DICE_TYPES = {
     "d6": {
         "classes": ['one', 'two', 'three', 'four', 'five', 'six'],
         "values":  [1,     2,     3,       4,      5,      6],
