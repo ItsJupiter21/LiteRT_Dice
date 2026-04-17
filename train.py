@@ -3,6 +3,7 @@ from models import DICE_TYPES
 from time import time
 import matplotlib.pyplot as plt
 import math
+import os
 
 # ==========================================
 # 1. Configuration & File Paths
@@ -33,12 +34,14 @@ EPOCHS = 40
 print("Loading dataset...")
 starttime = time()
 
+
 # ==========================================
-# 2. Data Loading & Splitting
+# 2. Data Loading & Splitting (The Mix)
 # ==========================================
 VALID_CLASSES = DICE_TYPES[DICE_TYPE]["classes"]
 print(f"Targeting specific classes: {VALID_CLASSES}")
 
+# A. Load the 24/7 Machine Data (80% Train, 20% Val)
 train_ds = tf.keras.utils.image_dataset_from_directory(
     DATASET_DIR,
     validation_split=0.2,
@@ -49,7 +52,7 @@ train_ds = tf.keras.utils.image_dataset_from_directory(
     class_names=VALID_CLASSES
 )
 
-val_ds = tf.keras.utils.image_dataset_from_directory(
+val_machine_ds = tf.keras.utils.image_dataset_from_directory(
     DATASET_DIR,
     validation_split=0.2,
     subset="validation",
@@ -61,6 +64,28 @@ val_ds = tf.keras.utils.image_dataset_from_directory(
 
 class_names = train_ds.class_names
 print(f"Successfully loaded classes: {class_names}")
+
+# B. Load the Phone Data (100% Validation)
+# You can add "phone_dir" to your DICE_TYPES dict, or it will default to a local folder
+VAL_DIR = DICE_TYPES[DICE_TYPE].get("validation_dir", '')
+
+if os.path.exists(VAL_DIR):
+    print(f"\nMixing in real-world phone data from '{VAL_DIR}'...")
+    val_phone_ds = tf.keras.utils.image_dataset_from_directory(
+        VAL_DIR,
+        image_size=(IMG_HEIGHT, IMG_WIDTH),
+        batch_size=BATCH_SIZE,
+        class_names=VALID_CLASSES,
+        shuffle=False  # No need to shuffle validation data
+    )
+
+    # C. Concatenate (The Mix)
+    val_ds = val_machine_ds.concatenate(val_phone_ds)
+    print("Validation set now contains both machine and phone images.")
+else:
+    print(f"\nNo phone data directory found at '{VAL_DIR}'.")
+    print("Using ONLY machine validation data.")
+    val_ds = val_machine_ds
 
 # ==========================================
 # 3. CPU Data Pipeline (Color Shifting)
