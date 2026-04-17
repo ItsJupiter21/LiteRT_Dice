@@ -19,10 +19,10 @@ else:
 from typing import Any
 
 try:
-    from classifier import DiceClassifier
-except ImportError:
     from classifier_Tensorflow import DiceClassifier
-    print("using simple classifier.")
+except ImportError:
+    print("failed to import using Tensorflow, using the LiteRT One.")
+    from classifier import DiceClassifier
 
 dice_type = 'd6_pips'
 classifer = DiceClassifier(DICE_TYPES[dice_type])

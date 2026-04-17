@@ -21,6 +21,7 @@ class DiceClassifier:
         """
         Loads the model into RAM once during initialization.
         """
+
         self.classes = model_info['classes']
         self.values = model_info['values']
 
@@ -32,6 +33,8 @@ class DiceClassifier:
         # 2. Cache the index pointers ONCE
         self.input_idx = self.interpreter.get_input_details()[0]['index']
         self.output_idx = self.interpreter.get_output_details()[0]['index']
+
+        print(f"Loaded model as Tensorflow from {model_info['model_path']}")
 
     def classify(self, bgr_frame: np.ndarray) -> tuple[str, int, float]:
         """
