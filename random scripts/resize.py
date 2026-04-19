@@ -1,7 +1,7 @@
 import cv2
 import os
 
-dirs = ["tests/d6"]
+dirs = ["tests/d6/unknown/"]
 size = 128
 
 for folder in dirs:

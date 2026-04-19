@@ -1,9 +1,9 @@
-import tensorflow as tf
-from models import DICE_TYPES
-from time import time
-import matplotlib.pyplot as plt
-import math
 import os
+import math
+import tensorflow as tf
+import matplotlib.pyplot as plt
+from time import time
+from models import DICE_TYPES
 
 # ==========================================
 # 1. Configuration & File Paths
@@ -17,6 +17,12 @@ if DICE_TYPE not in DICE_TYPES:
 # Data Paths
 DATASET_DIR = DICE_TYPES[DICE_TYPE]["dataset_dir"]
 MODEL_PATH = DICE_TYPES[DICE_TYPE]["model_path"]
+
+# We pull a secondary validation folder if it exists, otherwise default to a local path
+EXTRA_VAL_DIR = DICE_TYPES[DICE_TYPE].get(
+    "validation_dir", f"./{DICE_TYPE}_extra_val")
+
+EXTRA_VAL_DIR = ''  # no extra val dir
 
 # Output File Paths
 KERAS_FILENAME = f"{DICE_TYPE}_classifier.keras"
@@ -34,9 +40,8 @@ EPOCHS = 40
 print("Loading dataset...")
 starttime = time()
 
-
 # ==========================================
-# 2. Data Loading & Splitting (The Mix)
+# 2. Data Loading & Splitting
 # ==========================================
 VALID_CLASSES = DICE_TYPES[DICE_TYPE]["classes"]
 print(f"Targeting specific classes: {VALID_CLASSES}")
@@ -65,34 +70,37 @@ val_machine_ds = tf.keras.utils.image_dataset_from_directory(
 class_names = train_ds.class_names
 print(f"Successfully loaded classes: {class_names}")
 
-# B. Load the Phone Data (100% Validation)
-# You can add "phone_dir" to your DICE_TYPES dict, or it will default to a local folder
-VAL_DIR = DICE_TYPES[DICE_TYPE].get("validation_dir", '')
+# B. Load Extra Validation Data (e.g., phone photos, different lighting)
+missing_folders = [c for c in VALID_CLASSES if not os.path.isdir(
+    os.path.join(EXTRA_VAL_DIR, c))]
 
-if os.path.exists(VAL_DIR):
-    print(f"\nMixing in real-world phone data from '{VAL_DIR}'...")
-    val_phone_ds = tf.keras.utils.image_dataset_from_directory(
-        VAL_DIR,
+if os.path.exists(EXTRA_VAL_DIR) and not missing_folders:
+    print(f"\nMixing in real-world validation data from '{EXTRA_VAL_DIR}'...")
+    extra_val_ds = tf.keras.utils.image_dataset_from_directory(
+        EXTRA_VAL_DIR,
         image_size=(IMG_HEIGHT, IMG_WIDTH),
         batch_size=BATCH_SIZE,
         class_names=VALID_CLASSES,
         shuffle=False  # No need to shuffle validation data
     )
 
-    # C. Concatenate (The Mix)
-    val_ds = val_machine_ds.concatenate(val_phone_ds)
-    print("Validation set now contains both machine and phone images.")
+    # Concatenate the clean machine validation with the real-world validation
+    val_ds = val_machine_ds.concatenate(extra_val_ds)
+    print("Validation set now contains both machine and extra images.")
 else:
-    print(f"\nNo phone data directory found at '{VAL_DIR}'.")
-    print("Using ONLY machine validation data.")
+    print(f"\nSkipping extra validation data integration.")
+    if not os.path.exists(EXTRA_VAL_DIR):
+        print(f" -> Directory '{EXTRA_VAL_DIR}' does not exist.")
+    else:
+        print(f" -> Missing required sub-folders: {missing_folders}")
+
+    # Fallback to just using the machine's 20% split
     val_ds = val_machine_ds
 
 # ==========================================
 # 3. CPU Data Pipeline (Color Shifting)
 # ==========================================
 AUTOTUNE = tf.data.AUTOTUNE
-
-# Count the batches before we unbatch and lose the dataset length metadata
 STEPS_PER_EPOCH = len(train_ds)
 
 
@@ -120,16 +128,15 @@ val_ds = val_ds.cache().prefetch(buffer_size=AUTOTUNE)
 # 4. GPU Model Pipeline (Geometry & Light)
 # ==========================================
 data_augmentation = tf.keras.Sequential([
-    # Geometric transformations with black background fill to prevent "kaleidoscope" corners
+    # Geometric transformations with black background fill
     tf.keras.layers.RandomRotation(1.0, fill_mode='constant', fill_value=0.0),
     tf.keras.layers.RandomZoom(0.1, fill_mode='constant', fill_value=0.0),
-
     # Lighting
     tf.keras.layers.RandomContrast(0.2),
     tf.keras.layers.RandomBrightness(0.2),
 ])
 
-# Build the model using Flatten for spatial awareness (required for reading fonts)
+# Build the model
 model = tf.keras.Sequential([
     tf.keras.Input(shape=(IMG_HEIGHT, IMG_WIDTH, 3)),
     data_augmentation,
@@ -146,7 +153,6 @@ model = tf.keras.Sequential([
 
     tf.keras.layers.Dropout(0.2),
 
-    # RESTORED: Flatten keeps pixel geometry intact so the model can read lines and loops
     tf.keras.layers.Flatten(),
     tf.keras.layers.Dense(128, activation='relu'),
     tf.keras.layers.Dense(len(class_names), activation='softmax')
@@ -165,23 +171,20 @@ model.summary()
 # ==========================================
 print(f"\nGenerating augmented preview for full batch (Size: {BATCH_SIZE})...")
 
+# Ensure images directory exists
+os.makedirs("images", exist_ok=True)
+
 for images, labels in train_ds.take(1):
     augmented_images = data_augmentation(images, training=True)
 
-    # 1. Dynamically calculate grid dimensions
-    # We'll fix the number of columns to 8 and calculate needed rows
     cols = 8
     rows = math.ceil(len(images) / cols)
 
-    # 2. Scale figsize based on grid size (approx 2 inches per image)
     plt.figure(figsize=(cols * 2, rows * 2))
 
     for i in range(len(images)):
         ax = plt.subplot(rows, cols, i + 1)
-
-        # Convert to uint8 for plotting (Keras outputs floats [0-255] or [0-1])
         display_img = augmented_images[i].numpy().astype("uint8")
-
         plt.imshow(display_img)
         plt.title(class_names[labels[i]], fontsize=10)
         plt.axis("off")
@@ -190,19 +193,21 @@ for images, labels in train_ds.take(1):
     plt.savefig(PREVIEW_FIG_PATH)
     print(f"Full batch preview saved to '{PREVIEW_FIG_PATH}'.")
     break
+
 # ==========================================
 # 6. Training the Model
 # ==========================================
 print("\nStarting training...")
 
-# Early Stopping prevents overfitting
+# Tightened Early Stopping prevents overfitting to the 24/7 machine environment
 early_stop = tf.keras.callbacks.EarlyStopping(
     monitor='val_loss',
-    patience=6,              # Drop this from 15 to 5 or 6
-    min_delta=0.005,         # Ignore microscopic improvements
+    patience=20,
+    min_delta=0.001,
     restore_best_weights=True,
-    verbose=1                # Prints exactly when and why it stopped
+    verbose=1
 )
+
 history = model.fit(
     train_ds,
     validation_data=val_ds,
@@ -216,16 +221,11 @@ history = model.fit(
 # ==========================================
 print("\n--- Exporting Models ---")
 
-# A. Save the Full Keras Model (.keras)
-# Use this for high-precision desktop testing and retraining
 print(f"1. Saving full Keras model: {KERAS_FILENAME}")
 model.save(KERAS_FILENAME)
 
-# B. Convert and Save LiteRT Model (.tflite)
-# Use this for deployment on the Raspberry Pi
 print(f"2. Converting to LiteRT: {TFLITE_FILENAME}")
 converter = tf.lite.TFLiteConverter.from_keras_model(model)
-# Applies dynamic range quantization
 converter.optimizations = [tf.lite.Optimize.DEFAULT]
 tflite_model = converter.convert()
 
@@ -233,13 +233,14 @@ with open(TFLITE_FILENAME, 'wb') as f:
     f.write(tflite_model)
 
 print(
-    f"\nSuccess! Both models are now saved., {KERAS_FILENAME} and {TFLITE_FILENAME}")
+    f"\nSuccess! Both models are now saved: {KERAS_FILENAME} and {TFLITE_FILENAME}")
 
 endtime = time()
 time_diff = endtime - starttime
-
 actual_epochs = len(history.history['loss'])
+
 print(f"Total training and conversion time: {time_diff:.2f} seconds.")
+print(f"Finished in: {actual_epochs} epoches .")
 print(f"Average time per epoch: {time_diff / actual_epochs:.2f} seconds.")
 
 # ==========================================

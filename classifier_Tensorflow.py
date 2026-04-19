@@ -28,7 +28,8 @@ class DiceClassifier:
         # 'model_path' should point to a SavedModel folder or .keras/.h5 file
         self.model = tf.keras.models.load_model(
             model_info['model_path_keras'])
-        print(f"Loaded model as Tensorflow from {model_info['model_path']}")
+        print(
+            f"Loaded model as Tensorflow from {model_info['model_path_keras']}")
 
     def classify(self, bgr_frame: np.ndarray) -> tuple[str, int, float]:
         """

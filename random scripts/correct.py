@@ -16,11 +16,13 @@ images = glob.glob("*.jpeg") + glob.glob("*.jpg")
 
 print(f"Found {len(images)} images to label.")
 print("Enter the correct ROLL_VALUE (1-6). Press Enter to skip, 'q' to quit.")
+print("DONT ENTER THE VALUE YOU SEE, YOU HAVE TO DO THE OPPOSITE FACE")
 
 with open(output_file, 'a') as f:
+        f.write('FILE, ROLL_CORRECTED')
+
     for img_path in images:
         fname = os.path.basename(img_path)
-        f.write('FILE, ROLL_CORRECTED')
         # Simple prompt
         val = input(f"File [{fname}] -> Correct Value: ").strip()
         
