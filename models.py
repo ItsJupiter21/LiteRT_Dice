@@ -17,7 +17,7 @@ DICE_TYPES = {
         # keep index aligned with 'classes'
         "model_path": "d6_pips_classifier.tflite",
         "model_path_keras": "d6_pips_classifier.keras",
-        "dataset_dir": pathlib.Path("test/d6_pips"),
+        "dataset_dir": pathlib.Path("train/d6_pips"),
         "validation_dir": pathlib.Path("validation/d6_pips")
 
     },
