@@ -203,8 +203,8 @@ print("\nStarting training...")
 early_stop = tf.keras.callbacks.EarlyStopping(
     monitor='val_loss',
     patience=20,
-    min_delta=0.001,
-    restore_best_weights=True,
+    min_delta=0.0001,
+    restore_best_weights=False,
     verbose=1
 )
 
