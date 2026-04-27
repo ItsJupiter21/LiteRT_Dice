@@ -3,7 +3,8 @@ import os
 import numpy as np
 from scipy import stats
 
-dirs = ['d6/one', 'd6/two', 'd6/three', 'd6/four', 'd6/five', 'd6/six']
+dirs = ['train/d6/one', 'train/d6/two', 'train/d6/three',
+        'train/d6/four', 'train/d6/five', 'train/d6/six']
 # dirs = os.listdir()
 vals = []
 for dir in dirs:
