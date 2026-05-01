@@ -24,12 +24,12 @@ except ImportError:
     print("failed to import using Tensorflow, using the LiteRT One.")
     from classifier import DiceClassifier
 
-dice_type = 'd6'
+dice_type = 'd6_pips'
 classifer = DiceClassifier(DICE_TYPES[dice_type])
 
 base_dir = pathlib.Path(f"{dice_type}/")
-base_dir = pathlib.Path(f"train/d6")
-''
+base_dir = pathlib.Path(f"train/d6_pips")
+
 subdirs = DICE_TYPES[dice_type]["classes"]
 count = 0
 starttime = time()

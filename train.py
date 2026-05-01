@@ -8,7 +8,7 @@ from models import DICE_TYPES
 # ==========================================
 # 1. Configuration & File Paths
 # ==========================================
-DICE_TYPE = "d6"
+DICE_TYPE = "d6_pips"
 if DICE_TYPE not in DICE_TYPES:
     print(
         f"Error: Unsupported DICE_TYPE '{DICE_TYPE}'. Available types: {list(DICE_TYPES.keys())}")
